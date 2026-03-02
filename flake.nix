@@ -16,15 +16,24 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
-        # The static stdenv already contains the static-ready compiler
-        staticStdenv = pkgs.pkgsStatic.stdenv;
+        static = nixpkgs.legacyPackages.${system};
+        staticGcc = static.pkgsStatic.gcc;
+        staticGccBin = "${staticGcc}/bin";
       in
       {
-        devShells.default = pkgs.mkShell.override { stdenv = staticStdenv; } {
-          packages = with pkgs.pkgsStatic; [
-            cmake
-            gdb
+        devShells.default = pkgs.mkShell {
+          packages = [
+            staticGcc
+            static.pkgsStatic.glibc
+            static.pkgsStatic.gcc15
+            pkgs.just
+            pkgs.glibc # Add regular glibc for dynamic binaries
           ];
+          shellHook = ''
+            export PATH="${staticGccBin}:$PATH"
+            unset NIX_CFLAGS_COMPILE
+            export LD_LIBRARY_PATH="/lib64:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
+          '';
         };
       }
     );
