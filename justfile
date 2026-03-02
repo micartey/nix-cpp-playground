@@ -2,10 +2,10 @@ default:
     @just --list
 
 build:
-    g++ -std=c++17 -Wall -Wextra -o main main.cpp
+    g++ -std=c++17 -Wall -Wextra -o main ./src/main.cpp
 
 build-static:
-    g++ -static main.cpp -o main
+    g++ -static ./src/main.cpp -o main
 
 run: build
     ./main

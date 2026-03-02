@@ -1,5 +1,6 @@
 #include "Greeter.cpp"
 #include <algorithm>
+#include <cstdio>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -28,8 +29,10 @@ int main() {
   bool isStudent = true;
   std::string name = "World";
 
-  // Basic I/O
-  std::cout << "=== C++ Hello World ===" << std::endl;
+  // Apparently std::cout is not being used anymore!
+  // We should use "printf"
+  printf("Hello World!\n");
+
   std::cout << "Age: " << age << std::endl;
   std::cout << "Height: " << height << std::endl;
   std::cout << "Grade: " << grade << std::endl;
