@@ -1,4 +1,4 @@
-#include "Greeter.cpp"
+#include "../include/Greeter.hpp"
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
