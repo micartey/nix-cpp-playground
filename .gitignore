@@ -1,3 +1,8 @@
+# Binaries
 main
+*.o
+
+# Build
 /result*
 /result
+/.cache
