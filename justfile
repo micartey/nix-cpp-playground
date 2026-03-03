@@ -2,13 +2,13 @@ default:
     @just --list
 
 build:
-	g++ -std=c++17 -Wall -Wextra -I include -o main ./src/*.cpp
+	nix build .#default
 
 build-static:
-	g++ -static -I include ./src/*.cpp -o main
+	nix build .#static
 
 run: build
-    ./main
+    ./result/bin/main
 
 run-static: build-static
-    ./main
+    ./result/bin/main

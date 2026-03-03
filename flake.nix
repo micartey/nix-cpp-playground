@@ -21,6 +21,37 @@
         staticGccBin = "${staticGcc}/bin";
       in
       {
+        packages.default = pkgs.stdenv.mkDerivation {
+          pname = "hello-world";
+          version = "1.0.0";
+          src = ./.;
+          nativeBuildInputs = [ pkgs.gcc ];
+          buildPhase = ''
+            g++ -std=c++17 -Wall -Wextra -I include -o main ./src/*.cpp
+          '';
+          installPhase = ''
+            mkdir -p $out/bin
+            cp main $out/bin/
+          '';
+        };
+
+        packages.static = pkgs.stdenv.mkDerivation {
+          pname = "hello-world-static";
+          version = "1.0.0";
+          src = ./.;
+          nativeBuildInputs = [
+            pkgs.gcc
+            pkgs.glibc.static
+          ];
+          buildPhase = ''
+            g++ -static -I include ./src/*.cpp -o main
+          '';
+          installPhase = ''
+            mkdir -p $out/bin
+            cp main $out/bin/
+          '';
+        };
+
         devShells.default = pkgs.mkShell {
           packages = [
             staticGcc
