@@ -1,129 +1,68 @@
 #include "Greeter.hpp"
 #include <algorithm>
 #include <cstdio>
+#include <execution>
+#include <format>
 #include <iostream>
 #include <memory>
+#include <pistache/endpoint.h>
+#include <pistache/http.h>
+#include <ranges>
 #include <string>
 #include <vector>
 
-void printNumbers(int start, int end) {
-  for (int i = start; i <= end; ++i) {
-    std::cout << i << " ";
+using namespace Pistache;
+
+struct HelloHandler : public Http::Handler {
+  HTTP_PROTOTYPE(HelloHandler)
+
+  void onRequest(const Http::Request &,
+                 Http::ResponseWriter response) override {
+    response.send(Http::Code::Ok, "Hello from Pistache webserver!\n");
   }
-  std::cout << std::endl;
-}
+};
 
-int add(int a, int b) { return a + b; }
-
-int factorial(int n) {
-  if (n <= 1)
-    return 1;
-  return n * factorial(n - 1);
+std::string vec_to_string(const std::vector<int> &v) {
+  std::string s;
+  for (size_t i = 0; i < v.size(); ++i)
+    std::format_to(std::back_inserter(s), "{}{}", v[i],
+                   i == v.size() - 1 ? "" : ", ");
+  return s;
 }
 
 int main() {
-  // Variables and data types
-  int age = 25;
-  double height = 5.9;
-  char grade = 'A';
-  bool isStudent = true;
-  std::string name = "World";
 
-  // Apparently std::cout is not being used anymore!
-  // We should use "printf"
-  printf("Hello World!\n");
+  std::vector<int> numbers = {5, 2, 3, 1};
 
-  std::cout << "Age: " << age << std::endl;
-  std::cout << "Height: " << height << std::endl;
-  std::cout << "Grade: " << grade << std::endl;
-  std::cout << "Is Student: " << std::boolalpha << isStudent << std::endl;
-
-  // Control flow - if/else
-  if (age >= 18) {
-    std::cout << name << " is an adult" << std::endl;
-  } else {
-    std::cout << name << " is a minor" << std::endl;
+  for (int num : numbers) {
+    std::cout << num << std::endl;
   }
 
-  // Control flow - switch
-  switch (grade) {
-  case 'A':
-    std::cout << "Excellent!" << std::endl;
-    break;
-  case 'B':
-    std::cout << "Good!" << std::endl;
-    break;
-  default:
-    std::cout << "Keep trying!" << std::endl;
-  }
+  // "Crush with all CPU Cores"
+  std::for_each(std::execution::par_unseq, numbers.begin(), numbers.end(),
+                [](auto &num) { num += 1; });
 
-  // Control flow - for loop
-  std::cout << "Counting to 5: ";
-  for (int i = 1; i <= 5; ++i) {
-    std::cout << i << " ";
-  }
-  std::cout << std::endl;
+  // Stream API...
+  auto even =
+      numbers | std::views::filter([](const auto &p) { return p % 2 == 0; });
 
-  // Control flow - while loop
-  int count = 0;
-  while (count < 3) {
-    std::cout << "Count: " << count << std::endl;
-    ++count;
-  }
+  // Lambda is only executed here when called
+  std::vector<int> even_nums(even.begin(), even.end());
+  std::cout << vec_to_string(even_nums) << std::endl;
 
-  // Functions
-  std::cout << "5 + 3 = " << add(5, 3) << std::endl;
-  std::cout << "Factorial of 5: " << factorial(5) << std::endl;
-
-  // Pass by reference
-  printNumbers(1, 10);
-
-  // Vectors (STL)
-  std::vector<int> numbers = {5, 2, 8, 1, 9};
-  std::cout << "Vector before sort: ";
-  for (int n : numbers)
-    std::cout << n << " ";
-  std::cout << std::endl;
-
-  std::sort(numbers.begin(), numbers.end());
-  std::cout << "Vector after sort: ";
-  for (int n : numbers)
-    std::cout << n << " ";
-  std::cout << std::endl;
-
-  // String operations
-  std::string str1 = "Hello";
-  std::string str2 = "World";
-  std::string combined = str1 + ", " + str2 + "!";
-  std::cout << combined << std::endl;
-  std::cout << "Length: " << combined.length() << std::endl;
-
-  // Classes and objects
-  Greeter greeter(name);
+  Greeter greeter("Hello");
   greeter.greet();
 
-  // Using a pointer
-  Greeter *ptr = &greeter;
-  ptr->setName("C++");
-  ptr->greet();
+  // This is a smart pointer
+  auto smartGreet = std::make_unique<Greeter>("Smart");
+  smartGreet->greet();
 
-  // Smart pointer (memory management)
-  auto smartGreeter = std::make_unique<Greeter>("Smart Pointer");
-  smartGreeter->greet();
-
-  // Ternary operator
-  std::string result = (age >= 18) ? "adult" : "minor";
-  std::cout << "Status: " << result << std::endl;
-
-  // Constants
-  const int MAX_SIZE = 100;
-  std::cout << "Max size: " << MAX_SIZE << std::endl;
-
-  // Enum
-  enum Color { RED, GREEN, BLUE };
-  Color c = GREEN;
-  std::cout << "Color enum value: " << c << std::endl;
-
-  std::cout << "=== Program Complete ===" << std::endl;
-  return 0;
+  // Webserver with dependency
+  Address addr(Ipv4::any(), Port(9080));
+  auto opts = Http::Endpoint::options().threads(1);
+  Http::Endpoint server(addr);
+  server.init(opts);
+  server.setHandler(Http::make_handler<HelloHandler>());
+  std::cout << "Server listening on http://localhost:9080" << std::endl;
+  server.serve();
 }

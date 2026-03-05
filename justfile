@@ -2,10 +2,10 @@ default:
     @just --list
 
 build:
-	nix build .#default
+    nix build .#default
 
 build-static:
-	nix build .#static
+    nix build .#static
 
 run: build
     ./result/bin/main
