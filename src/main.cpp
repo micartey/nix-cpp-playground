@@ -16,8 +16,9 @@ using namespace Pistache;
 struct HelloHandler : public Http::Handler {
   HTTP_PROTOTYPE(HelloHandler)
 
-  void onRequest(const Http::Request &,
+  void onRequest(const Http::Request &request,
                  Http::ResponseWriter response) override {
+    std::cout << request.address() << std::endl;
     response.send(Http::Code::Ok, "Hello from Pistache webserver!\n");
   }
 };
@@ -30,6 +31,8 @@ std::string vec_to_string(const std::vector<int> &v) {
   return s;
 }
 
+int increase(int &num) { return num += 1; }
+
 int main() {
 
   std::vector<int> numbers = {5, 2, 3, 1};
@@ -39,8 +42,9 @@ int main() {
   }
 
   // "Crush with all CPU Cores"
+  // Anonym function: [](auto int &number) { return number; }
   std::for_each(std::execution::par_unseq, numbers.begin(), numbers.end(),
-                [](auto &num) { num += 1; });
+                increase);
 
   // Stream API...
   auto even =
