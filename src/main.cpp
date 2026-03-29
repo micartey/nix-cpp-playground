@@ -68,5 +68,6 @@ int main() {
   server.init(opts);
   server.setHandler(Http::make_handler<HelloHandler>());
   std::cout << "Server listening on http://localhost:9080" << std::endl;
+  printf("Server listening on http://localhost:9080");
   server.serve();
 }

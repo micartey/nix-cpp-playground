@@ -17,7 +17,9 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        staticOpenSsl = pkgs.openssl.overrideAttrs (old: rec {
+        # Nix does not offer a statically linked openssl dependency and we need that for pistache
+        # when building a statically linked binary
+        staticOpenSsl = pkgs.openssl.overrideAttrs (old: {
           name = "${old.pname}-static-${old.version}";
           configureFlags = (old.configureFlags or [ ]) ++ [
             "no-shared"
@@ -26,129 +28,79 @@
         });
 
         pistache = pkgs.stdenv.mkDerivation {
-          name = "pistache";
+          pname = "pistache";
+          version = "unstable";
           src = pkgs.fetchFromGitHub {
             owner = "pistacheio";
             repo = "pistache";
             rev = "8a1ac9059617d2e3c782f4b0afcdf9f55bb91a0a";
             hash = "sha256-gBMFelqy4yFgrI8TB7i3YqUWV9KjLS3MYL/R6U00U/M=";
           };
-
-          nativeBuildInputs = [
-            pkgs.meson
-            pkgs.ninja
-            pkgs.pkg-config
+          nativeBuildInputs = with pkgs; [
+            meson
+            ninja
+            pkg-config
           ];
-
-          buildInputs = [
-            pkgs.openssl
-            pkgs.rapidjson
+          buildInputs = with pkgs; [
+            openssl
+            rapidjson
           ];
-
-          configurePhase = ''
-            meson setup build . --buildtype=release --prefix=$out -Ddefault_library=both
-          '';
-          buildPhase = ''
-            ninja -C build
-          '';
-          installPhase = ''
-            ninja -C build install
-          '';
+          mesonFlags = [ "-Ddefault_library=both" ];
         };
+
+        webserverBase = {
+          pname = "pistache-webserver";
+          version = "1.0.0";
+          src = pkgs.lib.cleanSource ./.;
+          nativeBuildInputs = with pkgs; [
+            meson
+            ninja
+            pkg-config
+          ];
+        };
+
       in
       {
-        packages.default = pkgs.stdenv.mkDerivation {
-          pname = "main";
-          version = "1.0.0";
-          src = pkgs.lib.cleanSource ./.;
-          nativeBuildInputs = [
-            pkgs.gcc
-            pkgs.meson
-            pkgs.ninja
-            pkgs.pkg-config
-          ];
+        packages = rec {
+          default = pkgs.stdenv.mkDerivation (
+            webserverBase
+            // {
+              buildInputs = [
+                pistache
+                pkgs.openssl
+                pkgs.rapidjson
+              ];
+            }
+          );
 
-          buildInputs = [
-            pistache
-            pkgs.openssl
-            pkgs.rapidjson
-          ];
-
-          configurePhase = ''
-            meson setup build . --buildtype=release --prefix=$out
-          '';
-
-          buildPhase = ''
-            ninja -C build
-          '';
-
-          installPhase = ''
-            ninja -C build install
-          '';
-        };
-
-        packages.static = pkgs.stdenv.mkDerivation {
-          pname = "pistache-webserver-static";
-          version = "1.0.0";
-          src = pkgs.lib.cleanSource ./.;
-
-          nativeBuildInputs = [
-            pkgs.gcc
-            pkgs.meson
-            pkgs.ninja
-            pkgs.pkg-config
-          ];
-
-          buildInputs = [
-            pkgs.glibc.static
-            pkgs.rapidjson
-            staticOpenSsl
-            pistache
-          ];
-
-          configurePhase = ''
-            export CFLAGS="-static -static-libgcc -static-libstdc++ -pthread"
-            export CXXFLAGS="-static -static-libgcc -static-libstdc++ -pthread"
-            export LDFLAGS="-static -static-libgcc -static-libstdc++ -pthread"
-            meson setup build . --buildtype=release --prefix=$out
-          '';
-
-          buildPhase = ''
-            ninja -C build
-          '';
-
-          installPhase = ''
-            ninja -C build install
-          '';
+          static = pkgs.stdenv.mkDerivation (
+            webserverBase
+            // {
+              buildInputs = [
+                pistache
+                pkgs.glibc.static
+                pkgs.rapidjson
+                staticOpenSsl
+              ];
+              CFLAGS = "-static -static-libgcc -static-libstdc++ -pthread";
+              CXXFLAGS = "-static -static-libgcc -static-libstdc++ -pthread";
+              LDFLAGS = "-static -static-libgcc -static-libstdc++ -pthread";
+            }
+          );
         };
 
         devShells.default = pkgs.mkShell {
-          packages = [
-            pkgs.glibc.static
-            pkgs.gcc15
-            pkgs.just
-            pkgs.glibc
-            pkgs.openssl
-            pkgs.rapidjson
-            pkgs.pkg-config
-            pkgs.meson
-            pkgs.ninja
-            pkgs.clang-tools
-            pkgs.gcc
+          # Using inputsFrom automatically pulls in dependencies from your default package
+          inputsFrom = [ self.packages.${system}.default ];
 
-            pistache
-            staticOpenSsl
+          nativeBuildInputs = with pkgs; [
+            gcc15
+            just
+            clang-tools
           ];
-          shellHook = ''
-            export PATH="${pkgs.gcc}/bin:${pkgs.clang-tools}/bin:$PATH"
-            export CPATH="${pistache}/include:${staticOpenSsl}/include:$CPATH"
-            export CXXFLAGS="-I${pistache}/include -I${staticOpenSsl}/include $CXXFLAGS"
-            export LIBRARY_PATH="${pistache}/lib:${staticOpenSsl}/lib:$LIBRARY_PATH"
-            export PKG_CONFIG_PATH="${pistache}/lib/pkgconfig:${pistache}/lib64/pkgconfig:${staticOpenSsl}/lib/pkgconfig:${staticOpenSsl}/lib64/pkgconfig:${pkgs.rapidjson}/lib/pkgconfig:${pkgs.rapidjson}/lib64/pkgconfig:$PKG_CONFIG_PATH"
-            unset NIX_CFLAGS_COMPILE
 
-            export LD_LIBRARY_PATH="/lib64:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
-          '';
+          # Removed the shellHook. Nix automatically configures CPATH, LIBRARY_PATH,
+          # and PKG_CONFIG_PATH when dependencies are provided in buildInputs/inputsFrom.
         };
       }
     );
