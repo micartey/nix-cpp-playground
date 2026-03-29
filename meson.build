@@ -12,6 +12,8 @@ add_project_arguments('-Wextra', language: 'cpp')
 
 pistache_dep = dependency('libpistache', required: true)
 openssl_dep = dependency('openssl', required: true)
+sqlite3_dep = dependency('sqlite3', required: true)
+sqlite_orm_dep = dependency('SqliteOrm', method: 'cmake', modules: ['sqlite_orm::sqlite_orm'])
 
 inc = include_directories('include')
 
@@ -20,6 +22,6 @@ sources = run_command('find', 'src', '-name', '*.cpp', check: true).stdout().str
 executable('main',
   sources,
   include_directories: inc,
-  dependencies: [pistache_dep, openssl_dep],
+  dependencies: [pistache_dep, openssl_dep, sqlite3_dep, sqlite_orm_dep],
   install: true
 )

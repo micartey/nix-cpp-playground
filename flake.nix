@@ -27,6 +27,15 @@
           ];
         });
 
+        staticSqlite = pkgs.runCommand "sqlite-static-${pkgs.sqlite.version}" { } ''
+          mkdir -p $out/lib $out/include $out/lib/pkgconfig
+          cp -r ${pkgs.sqlite.dev}/include/* $out/include/
+          cp ${pkgs.sqlite.out}/lib/*.a $out/lib/ || true
+          for pc in ${pkgs.sqlite.dev}/lib/pkgconfig/*.pc; do
+            sed "s|${pkgs.sqlite.dev}|$out|g;s|${pkgs.sqlite.out}|$out|g" "$pc" > $out/lib/pkgconfig/$(basename "$pc")
+          done
+        '';
+
         pistache = pkgs.stdenv.mkDerivation {
           pname = "pistache";
           version = "unstable";
@@ -56,6 +65,7 @@
             meson
             ninja
             pkg-config
+            cmake
           ];
         };
 
@@ -69,6 +79,8 @@
                 pistache
                 pkgs.openssl
                 pkgs.rapidjson
+                pkgs.sqlite
+                pkgs.sqlite_orm
               ];
             }
           );
@@ -81,6 +93,8 @@
                 pkgs.glibc.static
                 pkgs.rapidjson
                 staticOpenSsl
+                staticSqlite
+                pkgs.sqlite_orm
               ];
               CFLAGS = "-static -static-libgcc -static-libstdc++ -pthread";
               CXXFLAGS = "-static -static-libgcc -static-libstdc++ -pthread";
@@ -95,6 +109,7 @@
           packages = with pkgs; [
             bashInteractive
             bash-completion
+            sqlite
           ];
 
           nativeBuildInputs = with pkgs; [
