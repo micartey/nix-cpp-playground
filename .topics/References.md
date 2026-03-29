@@ -12,16 +12,35 @@
 | _No equivalent_                | `T&&` (rvalue reference)          | Binds to temporaries or `std::move`'d objects.                          |
 | _No equivalent_                | `const T&`                        | Binds to both lvalues and rvalues. Extends lifetime of temporaries.     |
 
-### Lvalue vs Rvalue
+### `lvalue` (Locator Value)
+
+An `lvalue` is an expression that points to a specific, identifiable memory location. 
+The object it refers to persists beyond the current expression.
+
+- You can take its address using the `&` operator.
+- Can typically appear on the left or right side of an assignment
+
+```c++
+int x = 10;  // 'x' is an lvalue
+x = 20;      // Valid: 'x' is on the left
+int* p = &x; // Valid: 'x' has a determinable memory address
+```
+
+### `rvalue` (Read Value)
+
+An `rvalue` is a temporary value that does not have a persistent, identifiable memory location. 
+It exists only for the duration of the expression being evaluated.
+
+- You cannot take its address using the `&` operator
+- Can only appear on the right side of an assignment operator
 
 ```cpp
-int x = 42;       // x is an lvalue (has a name, has an address)
-int& ref = x;     // lvalue reference to x
-
-int&& rref = 42;  // rvalue reference — binds to the temporary 42
-// int&& bad = x;  // ERROR: cannot bind rvalue reference to lvalue
-int&& moved = std::move(x); // std::move casts x to an rvalue
+int x = 10;     // '10' is an rvalue
+10 = x;         // Invalid: '10' cannot be assigned to
+// int* p = &10; // Invalid: Cannot take the address of an rvalue
 ```
+
+Typically literal constants (e.g. `10`, `'c'`), temporary arithmetic results (e.g. `x + 2`) or functions
 
 ### Pass by Value vs Reference
 

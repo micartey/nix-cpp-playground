@@ -1,4 +1,4 @@
-## Move Semantics
+## Move and Copy
 
 | Java Concept                    | C++ Move Semantics Equivalent        | Note                                                                  |
 | :------------------------------ | :----------------------------------- | :-------------------------------------------------------------------- |
@@ -19,6 +19,11 @@ Move:  src: [data] ──steal──> dst: [data]    (cheap: just swap pointers)
 ```
 
 ### Copy vs Move in Action
+
+It does exactly what one would expect
+
+- Move will move ownership and the old owner will no longer have a pointer to the object and thus be `0` or `null`
+- Copy clones the object and changes are not reflected to parents or children
 
 ```cpp
 #include <iostream>
@@ -44,17 +49,18 @@ int main() {
 
 ### `std::move` Does NOT Move
 
-`std::move` is just a cast to `T&&` (rvalue reference). The actual move happens when the move constructor or move assignment operator is called.
+`std::move` is just a cast to `T&&` (rvalue reference). 
+The actual move happens when the move constructor or move assignment operator is called.
 
 ```cpp
 std::string a = "hello";
 std::string b = std::move(a); // 1. std::move casts a to std::string&&
-                               // 2. std::string's move constructor is called
-                               // 3. b steals a's internal buffer
-                               // 4. a is now empty
+                              // 2. std::string's move constructor is called
+                              // 3. b steals a's internal buffer
+                              // 4. a is now empty
 ```
 
-### Writing a Move Constructor
+### Writing a Move and Copy Constructor
 
 ```cpp
 #include <algorithm>
@@ -77,35 +83,54 @@ public:
     }
 
     // Copy constructor — expensive
+    // Called when: Buffer b = a;
     Buffer(const Buffer& other) : data(new int[other.size]), size(other.size) {
+        // Allocate entirely NEW memory.
+        // Copy the actual value from 'other' into our new memory (Deep Copy).  
         std::copy(other.data, other.data + size, data);
-        std::cout << "Copied " << size << std::endl;
-    }
-
-    // Move constructor — cheap
-    Buffer(Buffer&& other) noexcept : data(other.data), size(other.size) {
-        other.data = nullptr; // leave source in valid state
-        other.size = 0;
-        std::cout << "Moved " << size << std::endl;
     }
 
     // Copy assignment
+    // Called when: b = a; (both already exist)
     Buffer& operator=(const Buffer& other) {
         if (this != &other) {
-            delete[] data;
+            // Free our existing memory first to prevent leaks
+            delete[] data; // Deleting data of "b" which we will re-assign now
+            
+            // Allocate NEW memory and copy the value
             size = other.size;
             data = new int[size];
             std::copy(other.data, other.data + size, data);
         }
         return *this;
     }
+    
+    // Move constructor — cheap
+    // Called when: Resource b = std::move(a); or returning a temporary from a function.
+    Buffer(Buffer&& other) noexcept {
+        // "Steal" the raw memory pointer directly from the source.
+        data = other.data;
+        size = other.size;
+        
+        // Disconnect the source from the memory.
+        // If we don't do this, the source's destructor will delete 
+        // the memory we just stole when the source goes out of scope.
+        other.data = nullptr; // leave source in valid state
+        other.size = 0;
+    }
 
     // Move assignment
+    // Called when: b = std::move(a); (both already exist)
     Buffer& operator=(Buffer&& other) noexcept {
         if (this != &other) {
-            delete[] data;
+            // Free our existing memory before overwriting our pointer 
+            delete[] data; // Deleting data of "b" which we will re-assign now
+            
+            // "Steal" the pointer from the source
             data = other.data;
             size = other.size;
+            
+            // Disconnect the source from the memory
             other.data = nullptr;
             other.size = 0;
         }
