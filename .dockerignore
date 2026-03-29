@@ -1,0 +1,8 @@
+build/
+result
+result-*
+.cache/
+.git/
+*.sqlite
+.scratchpad/
+.direnv/
