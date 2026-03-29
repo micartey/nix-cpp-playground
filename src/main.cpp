@@ -3,8 +3,10 @@
 #include <cstdio>
 #include <execution>
 #include <format>
+#include <functional>
 #include <iostream>
 #include <memory>
+#include <ostream>
 #include <pistache/endpoint.h>
 #include <pistache/http.h>
 #include <ranges>
@@ -21,6 +23,11 @@ struct HelloHandler : public Http::Handler {
     std::cout << request.address() << std::endl;
     response.send(Http::Code::Ok, "Hello from Pistache webserver!\n");
   }
+
+  // void onConnection(const std::shared_ptr<Tcp::Peer> &peer) override {
+  //     std::cout << "New connection from" << peer->address() << std::endl;
+  //     Http::Handler::onConnection(peer);
+  // }
 };
 
 std::string vec_to_string(const std::vector<int> &v) {
@@ -54,12 +61,41 @@ int main() {
   std::vector<int> even_nums(even.begin(), even.end());
   std::cout << vec_to_string(even_nums) << std::endl;
 
+  // Create object on stack
+  // Stack is cheap fast and sits next to each other in memory (locality) which is good for CPU
+  // Can also be never null and thus no null checks needed
   Greeter greeter("Hello");
   greeter.greet();
 
   // This is a smart pointer
+  // A pointer that automatically cleans itself once not needed anymore
+  // Create object on heap
+  //
+  // 1. Use for polymorphism e.g. vector of shapes (Circle and Square):
+  //
+  //    std::vector<std::unique_ptr<Shape>> shapes;
+  //    shapes.push_back(std::make_unique<Circle>());
+  //    shapes.push_back(std::make_unique<Square>());
+  //
+  // 2. Use when you need "null"
   auto smartGreet = std::make_unique<Greeter>("Smart");
   smartGreet->greet();
+
+  // Clone an object
+  auto cloneGreeter = std::make_unique<Greeter>(*smartGreet);
+  cloneGreeter->greet();
+
+  auto newCloneGreeterOwner = std::move(cloneGreeter); // Needs move call
+  std::cout << cloneGreeter << std::endl;              // Is "0" / Doesn't point anymore
+  std::cout << newCloneGreeterOwner << std::endl;
+
+  // Shared pointers
+  // Used when an object needs to be hold by many owners
+  auto sharedGreeter = std::make_shared<Greeter>(*smartGreet);
+  auto newSharedGreeterRef = sharedGreeter; // This works because it is a shared pointer
+  if (newSharedGreeterRef == sharedGreeter) {
+      printf("Pointers are equal\n");
+  }
 
   // Webserver with dependency
   Address addr(Ipv4::any(), Port(9080));
