@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <execution>
 #include <format>
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <ostream>
