@@ -90,8 +90,12 @@
         };
 
         devShells.default = pkgs.mkShell {
-          # Using inputsFrom automatically pulls in dependencies from your default package
           inputsFrom = [ self.packages.${system}.default ];
+
+          packages = with pkgs; [
+            bashInteractive
+            bash-completion
+          ];
 
           nativeBuildInputs = with pkgs; [
             gcc15
@@ -99,8 +103,9 @@
             clang-tools
           ];
 
-          # Removed the shellHook. Nix automatically configures CPATH, LIBRARY_PATH,
-          # and PKG_CONFIG_PATH when dependencies are provided in buildInputs/inputsFrom.
+          shellHook = ''
+            export SHELL=${pkgs.bashInteractive}/bin/bash
+          '';
         };
       }
     );
