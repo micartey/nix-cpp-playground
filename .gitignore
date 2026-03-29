@@ -3,9 +3,16 @@ main
 *.o
 
 # Build
+/build/
 /result*
 /result
 /.cache
+
+# Conan
+CMakeUserPresets.json
+conanbuildinfo.*
+conaninfo.txt
+graph_info.json
 
 # Database
 *.sqlite

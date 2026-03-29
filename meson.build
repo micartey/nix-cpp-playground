@@ -13,7 +13,10 @@ add_project_arguments('-Wextra', language: 'cpp')
 pistache_dep = dependency('libpistache', required: true)
 openssl_dep = dependency('openssl', required: true)
 sqlite3_dep = dependency('sqlite3', required: true)
-sqlite_orm_dep = dependency('SqliteOrm', method: 'cmake', modules: ['sqlite_orm::sqlite_orm'])
+sqlite_orm_dep = dependency('sqlite_orm', required: false)
+if not sqlite_orm_dep.found()
+  sqlite_orm_dep = dependency('SqliteOrm', method: 'cmake', modules: ['sqlite_orm::sqlite_orm'])
+endif
 
 inc = include_directories('include')
 

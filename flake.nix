@@ -15,10 +15,17 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [
+            (final: prev: {
+              conan = prev.conan.overridePythonAttrs (old: {
+                pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "patch-ng" ];
+              });
+            })
+          ];
+        };
 
-        # Nix does not offer a statically linked openssl dependency and we need that for pistache
-        # when building a statically linked binary
         staticOpenSsl = pkgs.openssl.overrideAttrs (old: {
           name = "${old.pname}-static-${old.version}";
           configureFlags = (old.configureFlags or [ ]) ++ [
@@ -110,6 +117,7 @@
             bashInteractive
             bash-completion
             sqlite
+            conan
           ];
 
           nativeBuildInputs = with pkgs; [
